@@ -10,6 +10,8 @@ def init_db():
     if not os.path.exists(DB_PATH):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
+
+        # Tabelle für Rezepte
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS recipes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,6 +23,22 @@ def init_db():
                 snack INTEGER NOT NULL
             )
         ''')
+
+        # Tabelle für Wochenpläne
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS weekly_plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                monday TEXT,
+                tuesday TEXT,
+                wednesday TEXT,
+                thursday TEXT,
+                friday TEXT,
+                saturday TEXT,
+                sunday TEXT
+            )
+        ''')
+
         conn.commit()
         conn.close()
 
