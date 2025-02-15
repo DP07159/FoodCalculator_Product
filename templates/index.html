@@ -7,55 +7,60 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Food Calculator – Rezeptverwaltung</h1>
+    <h1>Food Calculator – Wochenplan</h1>
 
-    <h2>Neues Rezept hinzufügen</h2>
-    <form id="recipeForm">
-        <label for="name">Rezeptname:</label>
-        <input type="text" id="name" required>
+    <h2>Wochenplan erstellen</h2>
+    <form id="weeklyPlanForm">
+        <label for="planName">Name des Wochenplans:</label>
+        <input type="text" id="planName" required>
 
-        <label for="calories">Kalorien:</label>
-        <input type="number" id="calories" required>
+        <div id="weekPlan">
+            <label>Montag:</label> <select id="monday"></select>
+            <label>Dienstag:</label> <select id="tuesday"></select>
+            <label>Mittwoch:</label> <select id="wednesday"></select>
+            <label>Donnerstag:</label> <select id="thursday"></select>
+            <label>Freitag:</label> <select id="friday"></select>
+            <label>Samstag:</label> <select id="saturday"></select>
+            <label>Sonntag:</label> <select id="sunday"></select>
+        </div>
 
-        <fieldset>
-            <legend>Für welche Mahlzeit geeignet?</legend>
-            <label><input type="checkbox" id="breakfast"> Frühstück</label>
-            <label><input type="checkbox" id="lunch"> Mittagessen</label>
-            <label><input type="checkbox" id="dinner"> Abendessen</label>
-            <label><input type="checkbox" id="snack"> Snack</label>
-        </fieldset>
-
-        <button type="submit">Rezept hinzufügen</button>
+        <button type="submit">Wochenplan speichern</button>
     </form>
 
-    <h2>Gespeicherte Rezepte</h2>
-    <ul id="recipeList"></ul>
+    <h2>Gespeicherte Wochenpläne</h2>
+    <select id="weeklyPlansDropdown"></select>
+    <button onclick="loadWeeklyPlan()">Wochenplan laden</button>
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             loadRecipes();
+            loadWeeklyPlans();
         });
 
-        document.getElementById("recipeForm").addEventListener("submit", function(event) {
+        document.getElementById("weeklyPlanForm").addEventListener("submit", function(event) {
             event.preventDefault();
 
-            const name = document.getElementById("name").value;
-            const calories = document.getElementById("calories").value;
-            const breakfast = document.getElementById("breakfast").checked ? 1 : 0;
-            const lunch = document.getElementById("lunch").checked ? 1 : 0;
-            const dinner = document.getElementById("dinner").checked ? 1 : 0;
-            const snack = document.getElementById("snack").checked ? 1 : 0;
+            const planName = document.getElementById("planName").value;
+            const weekData = {
+                monday: document.getElementById("monday").value,
+                tuesday: document.getElementById("tuesday").value,
+                wednesday: document.getElementById("wednesday").value,
+                thursday: document.getElementById("thursday").value,
+                friday: document.getElementById("friday").value,
+                saturday: document.getElementById("saturday").value,
+                sunday: document.getElementById("sunday").value
+            };
 
-            fetch("/add_recipe", {
+            fetch("/save_weekly_plan", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, calories, breakfast, lunch, dinner, snack })
+                body: JSON.stringify({ name: planName, ...weekData })
             })
             .then(response => response.json())
             .then(data => {
                 alert(data.message);
-                loadRecipes();
-                document.getElementById("recipeForm").reset();
+                loadWeeklyPlans();
+                document.getElementById("weeklyPlanForm").reset();
             });
         });
 
@@ -63,27 +68,26 @@
             fetch("/get_recipes")
             .then(response => response.json())
             .then(data => {
-                const recipeList = document.getElementById("recipeList");
-                recipeList.innerHTML = "";
-                data.forEach(recipe => {
-                    const li = document.createElement("li");
-                    li.innerHTML = `${recipe.name} - ${recipe.calories} kcal 
-                        (${recipe.breakfast ? "Frühstück " : ""}
-                         ${recipe.lunch ? "Mittagessen " : ""}
-                         ${recipe.dinner ? "Abendessen " : ""}
-                         ${recipe.snack ? "Snack" : ""})
-                        <button onclick="deleteRecipe(${recipe.id})">Löschen</button>`;
-                    recipeList.appendChild(li);
+                const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+                days.forEach(day => {
+                    const select = document.getElementById(day);
+                    select.innerHTML = "";
+                    data.forEach(recipe => {
+                        select.innerHTML += `<option value="${recipe.name}">${recipe.name} (${recipe.calories} kcal)</option>`;
+                    });
                 });
             });
         }
 
-        function deleteRecipe(recipeId) {
-            fetch(`/delete_recipe/${recipeId}`, { method: "DELETE" })
+        function loadWeeklyPlans() {
+            fetch("/get_weekly_plans")
             .then(response => response.json())
             .then(data => {
-                alert(data.message);
-                loadRecipes();
+                const dropdown = document.getElementById("weeklyPlansDropdown");
+                dropdown.innerHTML = "";
+                data.forEach(plan => {
+                    dropdown.innerHTML += `<option value="${plan.id}">${plan.name}</option>`;
+                });
             });
         }
     </script>
