@@ -1,1 +1,91 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Food Calculator – Rezeptverwaltung</h1>
 
+    <h2>Neues Rezept hinzufügen</h2>
+    <form id="recipeForm">
+        <label for="name">Rezeptname:</label>
+        <input type="text" id="name" required>
+
+        <label for="calories">Kalorien:</label>
+        <input type="number" id="calories" required>
+
+        <fieldset>
+            <legend>Für welche Mahlzeit geeignet?</legend>
+            <label><input type="checkbox" id="breakfast"> Frühstück</label>
+            <label><input type="checkbox" id="lunch"> Mittagessen</label>
+            <label><input type="checkbox" id="dinner"> Abendessen</label>
+            <label><input type="checkbox" id="snack"> Snack</label>
+        </fieldset>
+
+        <button type="submit">Rezept hinzufügen</button>
+    </form>
+
+    <h2>Gespeicherte Rezepte</h2>
+    <ul id="recipeList"></ul>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            loadRecipes();
+        });
+
+        document.getElementById("recipeForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const name = document.getElementById("name").value;
+            const calories = document.getElementById("calories").value;
+            const breakfast = document.getElementById("breakfast").checked ? 1 : 0;
+            const lunch = document.getElementById("lunch").checked ? 1 : 0;
+            const dinner = document.getElementById("dinner").checked ? 1 : 0;
+            const snack = document.getElementById("snack").checked ? 1 : 0;
+
+            fetch("/add_recipe", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, calories, breakfast, lunch, dinner, snack })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                loadRecipes();
+                document.getElementById("recipeForm").reset();
+            });
+        });
+
+        function loadRecipes() {
+            fetch("/get_recipes")
+            .then(response => response.json())
+            .then(data => {
+                const recipeList = document.getElementById("recipeList");
+                recipeList.innerHTML = "";
+                data.forEach(recipe => {
+                    const li = document.createElement("li");
+                    li.innerHTML = `${recipe.name} - ${recipe.calories} kcal 
+                        (${recipe.breakfast ? "Frühstück " : ""}
+                         ${recipe.lunch ? "Mittagessen " : ""}
+                         ${recipe.dinner ? "Abendessen " : ""}
+                         ${recipe.snack ? "Snack" : ""})
+                        <button onclick="deleteRecipe(${recipe.id})">Löschen</button>`;
+                    recipeList.appendChild(li);
+                });
+            });
+        }
+
+        function deleteRecipe(recipeId) {
+            fetch(`/delete_recipe/${recipeId}`, { method: "DELETE" })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                loadRecipes();
+            });
+        }
+    </script>
+</body>
+</html>
