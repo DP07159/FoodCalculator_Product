@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, request, jsonify
 import sqlite3
 import os
 
@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 DB_PATH = "food_calculator.db"
 
-# Funktion zum Initialisieren der Datenbank (wird beim Start aufgerufen)
+# Funktion zur Initialisierung der Datenbank
 def init_db():
     if not os.path.exists(DB_PATH):
         conn = sqlite3.connect(DB_PATH)
@@ -25,21 +25,6 @@ def init_db():
             )
         ''')
 
-        # Wochenpläne-Tabelle
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS weekly_plans (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                monday TEXT,
-                tuesday TEXT,
-                wednesday TEXT,
-                thursday TEXT,
-                friday TEXT,
-                saturday TEXT,
-                sunday TEXT
-            )
-        ''')
-
         conn.commit()
         conn.close()
         print("✅ Datenbank wurde erstellt!")
@@ -47,12 +32,7 @@ def init_db():
 # Datenbank beim Start initialisieren
 init_db()
 
-# Route für den Test
-@app.route('/')
-def index():
-    return "✅ Food Calculator Backend läuft mit SQLite!"
-
-# Route zum Abrufen der Rezepte
+# Route zum Abrufen aller Rezepte
 @app.route('/get_recipes', methods=['GET'])
 def get_recipes():
     conn = sqlite3.connect(DB_PATH)
@@ -60,26 +40,33 @@ def get_recipes():
     cursor.execute("SELECT id, name, calories, breakfast, lunch, dinner, snack FROM recipes")
     recipes = cursor.fetchall()
     conn.close()
-    
-    return jsonify(recipes)
+
+    # Umwandlung der Rezepte in JSON-Format
+    recipes_list = [
+        {"id": r[0], "name": r[1], "calories": r[2], "breakfast": bool(r[3]), "lunch": bool(r[4]), "dinner": bool(r[5]), "snack": bool(r[6])}
+        for r in recipes
+    ]
+
+    return jsonify(recipes_list)
 
 # Route zum Hinzufügen eines Rezepts
 @app.route('/add_recipe', methods=['POST'])
 def add_recipe():
-    # Daten aus der Anfrage
     data = request.get_json()
 
-    # Validierung der Eingabedaten
-    if not data or not 'name' in data or not 'calories' in data:
-        return jsonify({"error": "Fehlende Angaben (Name oder Kalorien)"}), 400
+    # Erwartete Parameter prüfen
+    required_fields = ["name", "calories", "breakfast", "lunch", "dinner", "snack"]
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
 
-    # Rezept in der Datenbank speichern
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+
     cursor.execute('''
         INSERT INTO recipes (name, calories, breakfast, lunch, dinner, snack) 
         VALUES (?, ?, ?, ?, ?, ?)
-    ''', (data['name'], data['calories'], data.get('breakfast', 0), data.get('lunch', 0), data.get('dinner', 0), data.get('snack', 0)))
+    ''', (data["name"], data["calories"], data["breakfast"], data["lunch"], data["dinner"], data["snack"]))
+
     conn.commit()
     conn.close()
 
