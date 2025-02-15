@@ -87,3 +87,60 @@ def delete_recipe(recipe_id):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
+
+# Wochenplan speichern
+@app.route('/save_weekly_plan', methods=['POST'])
+def save_weekly_plan():
+    data = request.get_json()
+
+    required_fields = ["name", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO weekly_plans (name, monday, tuesday, wednesday, thursday, friday, saturday, sunday) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (data["name"], data["monday"], data["tuesday"], data["wednesday"], data["thursday"], 
+          data["friday"], data["saturday"], data["sunday"]))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Wochenplan erfolgreich gespeichert!"}), 201
+
+# Gespeicherte Wochenpläne abrufen
+@app.route('/get_weekly_plans', methods=['GET'])
+def get_weekly_plans():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM weekly_plans")
+    plans = cursor.fetchall()
+    conn.close()
+
+    return jsonify([{"id": p[0], "name": p[1]} for p in plans])
+
+# Einen Wochenplan laden
+@app.route('/load_weekly_plan/<int:plan_id>', methods=['GET'])
+def load_weekly_plan(plan_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM weekly_plans WHERE id = ?", (plan_id,))
+    plan = cursor.fetchone()
+    conn.close()
+
+    if plan:
+        return jsonify({
+            "id": plan[0],
+            "name": plan[1],
+            "monday": plan[2],
+            "tuesday": plan[3],
+            "wednesday": plan[4],
+            "thursday": plan[5],
+            "friday": plan[6],
+            "saturday": plan[7],
+            "sunday": plan[8]
+        })
+    else:
+        return jsonify({"error": "Wochenplan nicht gefunden"}), 404
